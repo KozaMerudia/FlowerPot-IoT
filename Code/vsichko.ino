@@ -5,12 +5,11 @@
 LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
 
 #define dht_apin 10  
-#define sensorPin A5
+#define water_pin A5
 #define sensorPower 8
-const int sensor_pin = A0;  
+#define soil_pin A0
 
 dht DHT;
-
 
 int water_val = 0;
 int redLED = 9;
@@ -26,7 +25,6 @@ void setup(){
   digitalWrite(redLED, LOW);
   
   pinMode(dht_apin, INPUT);
-  Serial.begin(9600);
   
   lcd.begin(8, 2);
   delay(500);
@@ -99,7 +97,7 @@ int water_lvl = readSensor();
   lcd.setCursor(0,1);
   float moisture;
   int sensor_value;
-  sensor_value = analogRead(sensor_pin);
+  sensor_value = analogRead(soil_pin);
   moisture = ( 100 - ( (sensor_value/1023.00) * 100 ) );
   lcd.print("SM ");
   lcd.print(moisture);
@@ -138,7 +136,7 @@ int water_lvl = readSensor();
 int readSensor() {
   digitalWrite(sensorPower, HIGH);  
   delay(10);              
-  water_val = analogRead(sensorPin);  
+  water_val = analogRead(water_pin);  
   digitalWrite(sensorPower, LOW); 
   return water_val;         
 }
