@@ -1,24 +1,23 @@
-#define sensorPin A0
-#define sensorPower 10
+#define sensorPin A5
 
 int water_val = 0;
-int redLED = 11;
+int water_lvl = 0;
+int redLED = 9;
 int minlvl = 470;
 int maxlvl = 525;
 
-
 void setup() {
-  pinMode(sensorPower, OUTPUT);
-  digitalWrite(sensorPower, LOW);
+  pinMode(sensorPin, INPUT);
   Serial.begin(9600);
   
   pinMode(redLED, OUTPUT);
   digitalWrite(redLED, LOW);
-
 }
 
 void loop() {
-  int water_lvl = readSensor();
+  water_val = analogRead(sensorPin);
+  water_lvl = water_val;
+  
   int level = water_lvl;
   if (level == 0) {
     Serial.println("Water Level: Empty");
@@ -27,7 +26,7 @@ void loop() {
   else if (level > 0 && level <= minlvl) {
     Serial.println("Water Level: ");
     Serial.println(water_lvl);
-     digitalWrite(redLED, HIGH);
+      digitalWrite(redLED, HIGH);
       delay(700);
       digitalWrite(redLED, LOW);
       delay(700);
@@ -55,12 +54,4 @@ void loop() {
     delay(50);
   }
   delay(500);
-}
-
-int readSensor() {
-  digitalWrite(sensorPower, HIGH);  
-  delay(10);              
-  water_val = analogRead(sensorPin);  
-  digitalWrite(sensorPower, LOW); 
-  return water_val;         
 }

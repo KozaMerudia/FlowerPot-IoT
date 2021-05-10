@@ -6,19 +6,18 @@ LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
 
 #define dht_apin 10  
 #define water_pin A5
-#define sensorPower 8
 #define soil_pin A0
 
 dht DHT;
 
 int water_val = 0;
+int water_lvl = 0;
 int redLED = 9;
 int minlvl = 470;
 int maxlvl = 700;
 
 void setup(){
-  pinMode(sensorPower, OUTPUT);
-  digitalWrite(sensorPower, LOW);
+  pinMode(water_pin, INPUT);
   Serial.begin(9600);
   
   pinMode(redLED, OUTPUT);
@@ -35,10 +34,13 @@ void setup(){
  
 void loop(){
   //Start of Water Level Sensor
-int water_lvl = readSensor();
+  water_val = analogRead(water_pin);
+  water_lvl = water_val;
   int level = water_lvl;
+  
   lcd.clear();
   lcd.setCursor(0,0); 
+  
   if (level == 0) {
     Serial.println("Water Level: Empty");
       lcd.print("WL Empty");
@@ -132,11 +134,4 @@ int water_lvl = readSensor();
     delay(3000);//Wait 5 seconds before accessing sensor again.
   //Fastest should be once every two seconds.
                           //End of Temperature-Humidity Sensor
-}
-int readSensor() {
-  digitalWrite(sensorPower, HIGH);  
-  delay(10);              
-  water_val = analogRead(water_pin);  
-  digitalWrite(sensorPower, LOW); 
-  return water_val;         
 }
