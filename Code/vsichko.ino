@@ -7,6 +7,7 @@ LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
 #define dht_apin 10  
 #define water_pin A5
 #define soil_pin A0
+#define relay_pin 6
 
 dht DHT;
 
@@ -16,14 +17,16 @@ int redLED = 9;
 int minlvl = 470;
 int maxlvl = 700;
 
-void setup(){
+void setup(){  
+  pinMode(dht_apin, INPUT);
   pinMode(water_pin, INPUT);
   Serial.begin(9600);
   
   pinMode(redLED, OUTPUT);
   digitalWrite(redLED, LOW);
-  
-  pinMode(dht_apin, INPUT);
+
+  pinMode(relay_pin, OUTPUT);
+  digitalWrite(relay_pin, HIGH);
   
   lcd.begin(8, 2);
   delay(500);
@@ -33,7 +36,7 @@ void setup(){
 }//end "setup()"
  
 void loop(){
-  //Start of Water Level Sensor
+//Start of Water Level Sensor
   water_val = analogRead(water_pin);
   water_lvl = water_val;
   int level = water_lvl;
@@ -93,9 +96,9 @@ void loop(){
     digitalWrite(redLED, LOW);
     delay(50);
   }
-                     //End of Water Level Sensor
+                             //End of Water Level Sensor
 
-  //Start of Soil Moisture Sensor
+//Start of Soil Moisture Sensor
   lcd.setCursor(0,1);
   float moisture;
   int sensor_value;
@@ -108,9 +111,17 @@ void loop(){
   Serial.print(moisture);
   Serial.print("% \n");
   delay(4000);               //End of Soil Moisture Sensor
-  
+
+//Start of Water Pump
+  if (moisture < 35){
+  digitalWrite(relay_pin, LOW);
+  delay(5000);
+  digitalWrite(relay_pin, HIGH);
+    }                        //End of Water Pump
+   
   lcd.clear();
-  //Start of Temperature-Humidity Sensor
+  
+//Start of Temperature-Humidity Sensor
     DHT.read11(dht_apin);
 
     Serial.print("Humidity = ");
