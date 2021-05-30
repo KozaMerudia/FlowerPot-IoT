@@ -14,8 +14,11 @@ dht DHT;
 int water_val = 0;
 int water_lvl = 0;
 int redLED = 9;
-int minlvl = 470;
-int maxlvl = 700;
+int minlvl = 10;
+int maxlvl = 90;
+
+int pump = 0;
+int lvl=0;
 
 void setup(){  
   pinMode(dht_apin, INPUT);
@@ -36,41 +39,60 @@ void setup(){
 }//end "setup()"
  
 void loop(){
+  lcd.clear(); 
+  delay(100);
+  
+
+  
 //Start of Water Level Sensor
+
   water_val = analogRead(water_pin);
-  water_lvl = water_val;
-  int level = water_lvl;
+  lvl = water_val;
+  water_lvl = map(water_val,470,735,0,100);
+  int level=0;
+  level = water_lvl;
   
-  lcd.clear();
-  lcd.setCursor(0,0); 
-  
-  if (level == 0) {
+  lcd.setCursor(0,0);
+  if (level <= 0) {
     Serial.println("Water Level: Empty");
       lcd.print("WL Empty");
       digitalWrite(redLED, HIGH);
+      pump=pump+1;
   }
   else if (level > 0 && level <= minlvl) {
     Serial.println("Water Level: ");
+    Serial.println(water_lvl);
+    Serial.print(lvl);
     lcd.print("WL ");
     lcd.print(water_lvl);
-    Serial.println(water_lvl);
+    lcd.print(" %");
      digitalWrite(redLED, HIGH);
       delay(700);
       digitalWrite(redLED, LOW);
+      delay(700);
+      digitalWrite(redLED, HIGH);
+      delay(700);
+      digitalWrite(redLED, LOW);
+      delay(700);
+      digitalWrite(redLED, HIGH);
       delay(700);
   }
   else if (level > minlvl && level <= maxlvl) {
     lcd.print("WL ");
     lcd.print(water_lvl);
+    lcd.print(" %");
     Serial.println("Water Level: ");
     Serial.println(water_lvl);
+    Serial.println(lvl);
     digitalWrite(redLED, LOW);
   }
   else if (level > maxlvl) {
     lcd.print("WL ");
     lcd.print(water_lvl);
+    lcd.print(" %");
     Serial.println("Water Level: ");
     Serial.println(water_lvl);
+    Serial.println(lvl);
     digitalWrite(redLED, HIGH);
     delay(50);
     digitalWrite(redLED, LOW);
@@ -92,35 +114,46 @@ void loop(){
     digitalWrite(redLED, LOW);
     delay(50);
     digitalWrite(redLED, HIGH);
-    delay(50);
-    digitalWrite(redLED, LOW);
     delay(50);
   }
                              //End of Water Level Sensor
 
 //Start of Soil Moisture Sensor
   lcd.setCursor(0,1);
-  float moisture;
-  int sensor_value;
-  sensor_value = analogRead(soil_pin);
-  moisture = ( 100 - ( (sensor_value/1023.00) * 100 ) );
+  delay(100);
+  float soil_value=0;
+  int dryness=0;
+  int moisture=0;
+  soil_value = analogRead(soil_pin);
+  dryness = map(soil_value, 0, 1023, 0, 100);
+  moisture = 100 - dryness;
   lcd.print("SM ");
   lcd.print(moisture);
-  lcd.print("%");
+  lcd.print(" %");
   Serial.print("Moisture: ");
   Serial.print(moisture);
   Serial.print("% \n");
-  delay(4000);               //End of Soil Moisture Sensor
+  delay(3000);                   //End of Soil Moisture Sensor
 
 //Start of Water Pump
+if(pump==0){
   if (moisture < 35){
   digitalWrite(relay_pin, LOW);
-  delay(5000);
+  delay(10000);
   digitalWrite(relay_pin, HIGH);
-    }                        //End of Water Pump
-   
+  pump=pump+1;
+  }
+}                              
+else{pump=pump+1;}
+  if (pump>=5){
+  pump=0;}                      //End of Water Pump
+ 
+  lcd.setCursor(0,0); 
   lcd.clear();
-  
+  lcd.setCursor(0,1); 
+  lcd.clear();
+  delay(100);
+
 //Start of Temperature-Humidity Sensor
     DHT.read11(dht_apin);
 
@@ -142,7 +175,7 @@ void loop(){
     lcd.print("%");
     delay(1000);
       
-    delay(3000);//Wait 5 seconds before accessing sensor again.
+    delay(3000);//Wait 3 seconds before accessing sensor again.
   //Fastest should be once every two seconds.
                           //End of Temperature-Humidity Sensor
 }
