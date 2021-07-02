@@ -4,22 +4,34 @@
 //LiquidCrystal(RS, E, D4, D5, D6, D7)
 LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
 
-#define dht_apin 10  
-#define water_pin A5
-#define soil_pin A0
-#define relay_pin 6
+#define dht_apin 10               //Temperature-Humidity Sensor
+#define water_pin A5              //Water Level Sensor
+#define soil_pin A0               //Soil Moisture Sensor
+#define relay_pin 6               //Water Pump Controller
 
 dht DHT;
 
-int water_val = 0;
-int water_lvl = 0;
-int water_redLED = 9;
+int water_redLED = 9;             //led on pin 9 indicate water level
+int water_val = 0;                //water level in analog value
+int water_level = 0;              //water level value in percents
 int water_minlvl = 10;
 int water_maxlvl = 90;
 int i = 0;
 
-int pump = 0;
-int lvl=0;
+float soil_value=0;
+int soil_dryness=0;
+int soil_moisture=0;
+
+boolean pump = true;
+unsigned long time_pump = - 86400000;    // 24 hours 
+unsigned long time_lcd = 0;
+unsigned long time_redLED = 0;
+unsigned long time_soil = 0;
+
+void wait(int interval, unsigned long time_millis){
+  while(millis() < time_millis + interval){
+  }
+}
 
 void setup(){  
   pinMode(dht_apin, INPUT);
@@ -33,66 +45,66 @@ void setup(){
   digitalWrite(relay_pin, HIGH);
   
   lcd.begin(8, 2);
-  delay(500);
   lcd.setCursor(0,0); 
-  delay(500);//Delay to let system boot
+  time_lcd = millis();
+  wait(500,time_lcd);
+  //Delay to let system boot
   
 }//end "setup()"
  
 void loop(){
   lcd.clear(); 
-  delay(100);
+  time_lcd = millis();
+  wait(100,time_lcd);
+  lcd.setCursor(0,0);
   
 //Start of Water Level Sensor
-
   water_val = analogRead(water_pin);
-  lvl = water_val;
-  water_lvl = map(water_val,470,735,0,100);
-  int level=0;
-  level = water_lvl;
-  
-  lcd.setCursor(0,0);
-  if (level <= 0) {
+  water_level = map(water_val,470,735,0,100);
+  if (water_level <= 0) {
       Serial.println("Water Level: Empty");
       lcd.print("WL Empty");
       digitalWrite(water_redLED, HIGH);
-      pump=pump+1;
+      pump = false;
   }
-  else if (level > 0 && level <= water_minlvl) {
+  else if (water_level > 0 && water_level <= water_minlvl) {
       Serial.println("Water Level: ");
-      Serial.println(water_lvl);
-      Serial.print(lvl);
+      Serial.println(water_level);
+      Serial.print(water_val);
       lcd.print("WL ");
-      lcd.print(water_lvl);
+      lcd.print(water_level);
       lcd.print(" %");
-      blinking_led(5,250);
+      time_redLED = millis();
+      blinking_led(5,250,time_redLED);
+      pump = true;
   }
-  else if (level > water_minlvl && level <= water_maxlvl) {
+  else if (water_level > water_minlvl && water_level <= water_maxlvl) {
       lcd.print("WL ");
-      lcd.print(water_lvl);
+      lcd.print(water_level);
       lcd.print(" %");
       Serial.println("Water Level: ");
-      Serial.println(water_lvl);
-      Serial.println(lvl);
+      Serial.println(water_level);
+      Serial.println(water_val);
       digitalWrite(water_redLED, LOW);
+      pump = true;
   }
-  else if (level > water_maxlvl) {
+  else if (water_level > water_maxlvl) {
       lcd.print("WL ");
-      lcd.print(water_lvl);
+      lcd.print(water_level);
       lcd.print(" %");
       Serial.println("Water Level: ");
-      Serial.println(water_lvl);
-      Serial.println(lvl);
-      blinking_led(10,50);
+      Serial.println(water_level);
+      Serial.println(water_val);
+      time_redLED = millis();
+      blinking_led(10,50,time_redLED);
+      pump = true;
   }
-                             //End of Water Level Sensor
+                               //End of Water Level Sensor
+  lcd.setCursor(0,1);
+  time_lcd = millis();
+  wait(100,time_lcd);
 
 //Start of Soil Moisture Sensor
-  lcd.setCursor(0,1);
-  delay(100);
-  float soil_value=0;
-  int soil_dryness=0;
-  int soil_moisture=0;
   soil_value = analogRead(soil_pin);
   soil_dryness = map(soil_value, 0, 1023, 0, 100);
   soil_moisture = 100 - soil_dryness;
@@ -102,26 +114,28 @@ void loop(){
   Serial.print("Moisture: ");
   Serial.print(soil_moisture);
   Serial.print("% \n");
-  delay(3000);                   //End of Soil Moisture Sensor
+  time_soil = millis();
+  wait(3000,time_soil);        //End of Soil Moisture Sensor
 
 //Start of Water Pump
-  if(pump==0){
-    if (soil_moisture < 35){
-      digitalWrite(relay_pin, LOW);
-      delay(10000);
-      digitalWrite(relay_pin, HIGH);
-      pump=pump+1;
+  if(pump == true){
+    if(millis() > time_pump + 86400000){   //Checks if the flower need water once every day
+      time_pump = millis();
+      if (soil_moisture < 35){
+        digitalWrite(relay_pin, LOW);
+        time_pump = millis();
+        wait(3000,time_pump); 
+        digitalWrite(relay_pin, HIGH);
+      }
     }
-  }else{pump=pump+1;}
-  if (pump>=5){
-      pump=0;
-  }                      //End of Water Pump
-   
-    lcd.setCursor(0,0); 
-    lcd.clear();
-    lcd.setCursor(0,1); 
-    lcd.clear();
-    delay(100);
+  }                            //End of Water Pump
+ 
+  lcd.setCursor(0,0); 
+  lcd.clear();
+  lcd.setCursor(0,1); 
+  lcd.clear();
+  time_lcd = millis();
+  wait(100,time_lcd);
 
 //Start of Temperature-Humidity Sensor
   DHT.read11(dht_apin);
@@ -142,16 +156,22 @@ void loop(){
   lcd.print("H ");
   lcd.print(DHT.humidity);
   lcd.print("%");
-  delay(1000);
-      
-  delay(3000);//Wait 3 seconds before accessing sensor again.
+  time_lcd = millis();
+  wait(3000,time_lcd);
+  //Wait 3 seconds before accessing sensor again.
   //Fastest should be once every two seconds.
-                          //End of Temperature-Humidity Sensor
+                               //End of Temperature-Humidity Sensor
 }
 
-void blinking_led(int repeat, int wait){
-  for(i = 0; i <= repeat; i = i + 1)    
-    digitalWrite(water_redLED, HIGH);
-    delay(wait);
-    digitalWrite(water_redLED, LOW);
+void blinking_led(int repeat, int wait, unsigned long time_millis){
+  for(i = 0; i <= repeat; i += 1){
+    if(millis() > time_millis + wait){  
+      digitalWrite(water_redLED, HIGH);
+      time_millis = millis();
+    }
+    if(millis() > time_millis + wait){
+      digitalWrite(water_redLED, LOW);
+      time_millis = millis();
+    }
+  }
 }
