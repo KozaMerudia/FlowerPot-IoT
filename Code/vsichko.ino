@@ -1,6 +1,7 @@
-#include <dht.h>
-#include <LiquidCrystal.h>
+#include <dht.h>                  //Temperature-Humidity Sensor library
+#include <LiquidCrystal.h>        //Liquid Crystal library
 
+//Define Liquid Crystal Display
 //LiquidCrystal(RS, E, D4, D5, D6, D7)
 LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
 
@@ -9,32 +10,35 @@ LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
 #define soil_pin A0               //Soil Moisture Sensor Pin
 #define relay_pin 6               //Water Pump Controller Pin
 #define photoPin A1               //Light Intensity Sensor Pin
-#define lamp 7                    //led on pin 7 for additional lighting
 
+// Create an instance of the dht class called DHT
 dht DHT;
 
 int i = 0;                        //Counter variable
-int water_redLED = 9;             //led on pin 9 indicate water level
-int water_val = 0;                //water level in analog value
-int water_level = 0;              //water level value in percents
-int water_minlvl = 10;
-int water_maxlvl = 90;
+int water_redLED = 9;             //LED to indicate water level
+int water_val = 0;                //Water Level in analog value
+int water_level = 0;              //Water Level value in percents
+int water_minlvl = 10;            //Water Level in the tank 10%
+int water_maxlvl = 90;            //Water Level in the tank 90%
 
-float soil_value=0;
-int soil_dryness=0;
-int soil_moisture=0;
+float soil_value=0;               //Soil Druness in analog value
+int soil_dryness=0;               //Soil Druness value in percents
+int soil_moisture=0;              //Soil Moisture value in percents
 
-boolean pump = true;
+boolean pump = true;              //Indicates if there is water in the tank
 
 int photo_val = 0;                //Light Intensity in analog value
 int photo_percents=0;             //Light Intensity value in percents
+int lamp = 7;                     //LED for additional lighting
 
+//Variables for time counting
 unsigned long time_pump = - 86400000;    // 24 hours 
 unsigned long time_lcd = 0;
 unsigned long time_redLED = 0;
 unsigned long time_soil = 0;
 unsigned long time_light = 0;
 
+//Function for time counting
 void wait(int interval, unsigned long time_millis){
   while(millis() < time_millis + interval){
   }
@@ -42,19 +46,23 @@ void wait(int interval, unsigned long time_millis){
 
 void setup(){  
   Serial.begin(9600);
+  // Initialize sensors pins as INPUT 
+  // Initialize LED pins as OUTPUT in state LOW
   pinMode(dht_apin, INPUT);
+  
+  pinMode(photoPin , INPUT);
+  pinMode(lamp , OUTPUT);
+  digitalWrite(lamp,LOW);
  
   pinMode(water_pin, INPUT);
   pinMode(water_redLED, OUTPUT);
   digitalWrite(water_redLED, LOW);
-  
+
+  // Initialize the relay module controling the pump as OUTPUT in state HIGH
   pinMode(relay_pin, OUTPUT);
   digitalWrite(relay_pin, HIGH);
 
-  pinMode(photoPin , INPUT);
-  pinMode(lamp , OUTPUT);
-  digitalWrite(lamp,LOW);
-  
+  // Setting up the LCD
   lcd.begin(8, 2);
   lcd.setCursor(0,0); 
   time_lcd = millis();
@@ -70,14 +78,18 @@ void loop(){
   lcd.setCursor(0,0);
   
 //Start of Water Level Sensor
+  // Read Water Leve Sensor data
   water_val = analogRead(water_pin);
   water_level = map(water_val,470,735,0,100);
+  
+  // When water tank is empty the redLED turn on 
   if (water_level <= 0) {
       Serial.println("Water Level: Empty");
       lcd.print("WL Empty");
       digitalWrite(water_redLED, HIGH);
       pump = false;
       }
+  // When water level is below 10% full redLED start blinking slowly
   else if (water_level > 0 && water_level <= water_minlvl) {
       Serial.println("Water Level: ");
       Serial.println(water_level);
@@ -85,27 +97,32 @@ void loop(){
       lcd.print("WL ");
       lcd.print(water_level);
       lcd.print(" %");
+      
       time_redLED = millis();
       blinking_led(5,250,time_redLED);
       pump = true;
       }
+  // When water level is between 10 and 90% full redLED turn off
   else if (water_level > water_minlvl && water_level <= water_maxlvl) {
-      lcd.print("WL ");
-      lcd.print(water_level);
-      lcd.print(" %");
       Serial.println("Water Level: ");
       Serial.println(water_level);
       Serial.println(water_val);
+      lcd.print("WL ");
+      lcd.print(water_level);
+      lcd.print(" %");
+      
       digitalWrite(water_redLED, LOW);
       pump = true;
       }
+  // When water level is over 90% full redLED start blinking quickly
   else if (water_level > water_maxlvl) {
-      lcd.print("WL ");
-      lcd.print(water_level);
-      lcd.print(" %");
       Serial.println("Water Level: ");
       Serial.println(water_level);
       Serial.println(water_val);
+      lcd.print("WL ");
+      lcd.print(water_level);
+      lcd.print(" %");
+
       time_redLED = millis();
       blinking_led(10,50,time_redLED);
       pump = true;
@@ -116,21 +133,27 @@ void loop(){
   wait(100,time_lcd);
 
 //Start of Soil Moisture Sensor
+  // Read Soil Moisture Sensor data
   soil_value = analogRead(soil_pin);
   soil_dryness = map(soil_value, 0, 1023, 0, 100);
   soil_moisture = 100 - soil_dryness;
-  lcd.print("SM ");
-  lcd.print(soil_moisture);
-  lcd.print(" %");
+  
   Serial.print("Moisture: ");
   Serial.print(soil_moisture);
   Serial.print("% \n");
+
+  lcd.print("SM ");
+  lcd.print(soil_moisture);
+  lcd.print(" %");
+  
   time_soil = millis();
-  wait(3000,time_soil);        //End of Soil Moisture Sensor
+  wait(3000,time_soil);         //End of Soil Moisture Sensor
 
 //Start of Water Pump
+  // Checks if there is water in the tunk
   if(pump == true){
-    if(millis() > time_pump + 86400000){   //Checks if the flower need water once every day
+    // Checks if the flower need water once a day
+    if(millis() > time_pump + 86400000){
       time_pump = millis();
       if (soil_moisture < 35){
         digitalWrite(relay_pin, LOW);
@@ -140,7 +163,8 @@ void loop(){
         }
       }
     }                            //End of Water Pump
- 
+
+  // Clear the LCD screen
   lcd.setCursor(0,0); 
   lcd.clear();
   lcd.setCursor(0,1); 
@@ -148,7 +172,8 @@ void loop(){
   time_lcd = millis();
   wait(100,time_lcd);
 
- //Start of Temperature-Humidity Sensor
+//Start of Temperature-Humidity Sensor
+  // Read Temperature-Humidity Sensor data
   DHT.read11(dht_apin);
 
   Serial.print("Humidity = ");
@@ -174,9 +199,11 @@ void loop(){
                                //End of Temperature-Humidity Sensor
 
 //Start of Light Intensity Sensor
+  // Read Light Intensity Sensor data
   photo_val = analogRead(photoPin);
   photo_percents = filter(photo_val);
- 
+  
+  // Turn on additional lighting when needed
   if (photo_percents < 50){
     digitalWrite(lamp,HIGH);
     //digitalWrite(lamp,LOW);
@@ -201,6 +228,7 @@ void loop(){
   lcd.print("%");               //End of Light Intensity Sensor
 }               
  
+//Function for filtering bugs
 int filter(int values){
     int percents;
     i = 0;
@@ -209,8 +237,9 @@ int filter(int values){
       return percents;
       }
     else  i += 1;
-  }
+}
 
+//Blinking LED function
 void blinking_led(int repeat, int wait, unsigned long time_millis){
   for(i = 0; i <= repeat; i += 1){
     if(millis() > time_millis + wait){  
