@@ -1,4 +1,5 @@
 # FlowerPot-IoT
+The smart FlowerPot takes care of the health of the flowers
  
 # Features
 Мeasure the soil moisture in real time
@@ -9,7 +10,7 @@
 
 Мeasure the intensity of light on the flowerpot in real time
 
-Мeasure the water level in the tank in real time
+Мeasure the water level in the tank once a day
 
 Indicator light for tank level condition
 
